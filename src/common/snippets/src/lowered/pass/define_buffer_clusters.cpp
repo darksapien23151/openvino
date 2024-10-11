@@ -113,9 +113,11 @@ void DefineBufferClusters::parse_loop(const LinearIR::constExprIt& expr_it) {
                 continue;
 
             // Memory can be reused if reading and writing are executed proportionally:
+            //  - the same buffer allocation sizes
+            //  - output buffer can have precision with data size less than input buffer
             //  - the same reading/writing order
-            //  - the same buffer memory sizes
-            if ((input_buffer_expr->get_byte_size() != output_buffer_expr->get_byte_size()) ||
+            if ((input_buffer_expr->get_allocation_size() != output_buffer_expr->get_allocation_size()) ||
+                (input_buffer_expr->get_data_type().size() < output_buffer_expr->get_data_type().size()) ||
                 (input_buffer_expr->get_output_port_descriptor(0)->get_layout() != output_buffer_expr->get_input_port_descriptor(0)->get_layout()))
                 continue;
 
@@ -129,7 +131,11 @@ void DefineBufferClusters::parse_loop(const LinearIR::constExprIt& expr_it) {
 
                 // If data pointer shift parameters are unknown on model compilation stage (dynamic),
                 // we cannot be sure that these data pointers will be proportionally shifted in runtime.
-                if (input_params.is_static() && output_params.is_static() && input_params == output_params) {
+                // Note: data size of output buffer might be less than data size of input buffer.
+                if (input_params.is_static() && output_params.is_static() &&
+                    input_params.ptr_increment == output_params.ptr_increment &&
+                    input_params.finalization_offset == output_params.finalization_offset &&
+                    input_params.data_size >= output_params.data_size) {
                     const auto cluster_it = find_cluster_by_expr(input_buffer_expr);
                     OPENVINO_ASSERT(cluster_it != m_clusters.end(), "Buffer on inputs of Loop must be already saved in clusters");
                     // Add to the existing cluster
@@ -339,13 +345,12 @@ bool DefineBufferClusters::run(lowered::LinearIR& linear_ir, lowered::LinearIR::
     for (auto expr_it = begin; expr_it != end; ++expr_it) {
         const auto& expr = *expr_it;
         const auto op = expr->get_node();
-        if (ov::is_type<op::LoopEnd>(op)) {
-            parse_loop(expr_it);
-            continue;
-        }
-
         if (std::dynamic_pointer_cast<modifier::MemoryAccess>(op)) {
             parse_memory_access_op(expr);
+            continue;
+        }
+        if (ov::is_type<op::LoopEnd>(op)) {
+            parse_loop(expr_it);
             continue;
         }
     }
