@@ -214,6 +214,33 @@ INSTANTIATE_TEST_SUITE_P(smoke_shared_CompareWithRefs_BitwiseShift_Static,
                          bitwise_shift_params_static,
                          EltwiseLayerTest::getTestCaseName);
 
+std::vector<EltwiseTypes> eltwise_op_types_squared_diff = {
+        EltwiseTypes::SQUARED_DIFF,
+};
+
+std::vector<std::vector<ov::Shape>> in_shapes_squared_diff = {
+        {{1, 3, 224, 224}},
+        {{2, 3, 64, 64}},
+};
+
+const auto squared_diff_params = ::testing::Combine(
+        ::testing::ValuesIn(ov::test::static_shapes_to_test_representation(in_shapes_squared_diff)),
+        ::testing::ValuesIn(eltwise_op_types_squared_diff),
+        ::testing::ValuesIn(secondary_input_types),
+        ::testing::ValuesIn(op_types),
+        ::testing::Values(ov::element::f32),
+        ::testing::Values(ov::element::undefined),
+        ::testing::Values(ov::element::undefined),
+        ::testing::Values(ov::test::utils::DEVICE_CPU),
+        ::testing::Values(additional_config));
+
+INSTANTIATE_TEST_SUITE_P(
+    smoke_CompareWithRefs_SquaredDiff_Static,
+    EltwiseLayerTest,
+    squared_diff_params,
+    EltwiseLayerTest::getTestCaseName);
+
+
 const auto bitwise_shift_params_dynamic = ::testing::Combine(
         ::testing::ValuesIn(in_shapes_dynamic),
         ::testing::ValuesIn(bitshift_types),
