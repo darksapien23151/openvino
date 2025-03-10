@@ -153,6 +153,26 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
       #
+      # Pack and upload build & test artifacts
+      #
+
+      - name: Archive test binaries
+        run: |
+          if [ -d "${BUILD_DIR}/bin/tests" ]; then
+            tar -czvf test_binaries.tar.gz -C ${BUILD_DIR}/bin tests
+          else
+            echo "No test binaries found, skipping."
+          fi
+
+      - name: Upload build & test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: openvino-test-artifacts
+          path: |
+            ${BUILD_DIR}/bin/
+            test_binaries.tar.gz
+      #
       # Upload build logs
       #
       - name: Upload build logs
